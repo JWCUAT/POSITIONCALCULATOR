@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Position Sizing Calculator with Live List</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+        .calculator-card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+            text-align: center;
+            font-size: 24px;
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 10px;
+        }
+        .risk-badge {
+            background-color: #e74c3c;
+            color: white;
+            text-align: center;
+            padding: 6px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        input:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        .results {
+            margin-top: 25px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid #2ecc71;
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .result-row:last-child {
+            margin-bottom: 0;
+        }
+        .result-val {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .error {
+            color: #e74c3c;
+            font-size: 13px;
+            margin-top: 5px;
+            display: none;
+        }
+        button {
+            width: 100%;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        /* Table Styles */
+        .table-container {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+        }
+        .table-container h3 {
+            margin-top: 0;
+            color: #333;
+            font-size: 18px;
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            text-align: left;
+        }
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f8f9fa;
+            color: #555;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        .empty-text {
+            color: #999;
+            text-align: center;
+            padding: 20px 0;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator-card">
+    <h2>Position Size Calculator</h2>
+    <div class="risk-badge">Fixed Risk: ₹4,000</div>
+    
+    <div class="input-group">
+        <label for="ticker">Stock Ticker / Symbol</label>
+        <input type="text" id="ticker" placeholder="e.g., RELIANCE" oninput="calculateSize()">
+    </div>
+
+    <div class="input-group">
+        <label for="entry">Entry Price (₹)</label>
+        <input type="number" id="entry" placeholder="e.g., 2500" step="any" oninput="calculateSize()">
+    </div>
+    
+    <div class="input-group">
+        <label for="sl">Stop Loss (SL) Price (₹)</label>
+        <input type="number" id="sl" placeholder="e.g., 2450" step="any" oninput="calculateSize()">
+    </div>
+    
+    <div id="error-msg" class="error">SL must be less than Entry for Long (or greater for Short).</div>
+
+    <div class="results">
+        <div class="result-row">
+            <span>Risk Per Share:</span>
+            <span class="result-val" id="risk-per-share">₹0.00</span>
+        </div>
+        <div class="result-row">
+            <span><strong>Quantity (Shares):</strong></span>
+            <span class="result-val" id="quantity" style="color: #2ecc71; font-size: 18px;">0</span>
+        </div>
+        <div class="result-row">
+            <span>Total Capital Needed:</span>
+            <span class="result-val" id="total-investment">₹0.00</span>
+        </div>
+    </div>
+
+    <button onclick="savePosition()">Add to Watchlist</button>
+</div>
+
+<div class="table-container">
+    <h3>Saved Trade Orders (Sorted by Capital Required)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Ticker</th>
+                <th>Entry Price</th>
+                <th>Stop Loss</th>
+                <th>Position Size (Qty)</th>
+                <th>Capital Needed</th>
+            </tr>
+        </thead>
+        <tbody id="table-body">
+            </tbody>
+    </table>
+    <div id="empty-msg" class="empty-text">No positions added yet.</div>
+</div>
+
+<script>
+    // In-memory array to store items during the session
+    let savedPositions = [];
+
+    // Global calculation tracking variables
+    let currentQty = 0;
+    let currentInvestment = 0;
+
+    function calculateSize() {
+        const entry = parseFloat(document.getElementById('entry').value);
+        const sl = parseFloat(document.getElementById('sl').value);
+        const fixedRisk = 4000;
+        
+        const errorMsg = document.getElementById('error-msg');
+        const riskPerShareEl = document.getElementById('risk-per-share');
+        const quantityEl = document.getElementById('quantity');
+        const totalInvestmentEl = document.getElementById('total-investment');
+
+        if (isNaN(entry) || isNaN(sl) || entry <= 0 || sl <= 0) {
+            riskPerShareEl.innerText = "₹0.00";
+            quantityEl.innerText = "0";
+            totalInvestmentEl.innerText = "₹0.00";
+            errorMsg.style.display = "none";
+            currentQty = 0;
+            currentInvestment = 0;
+            return;
+        }
+
+        const riskPerShare = Math.abs(entry - sl);
+
+        if (riskPerShare === 0) {
+            errorMsg.innerText = "Entry and SL cannot be the same.";
+            errorMsg.style.display = "block";
+            quantityEl.innerText = "0";
+            currentQty = 0;
+            currentInvestment = 0;
+            return;
+        } else {
+            errorMsg.style.display = "none";
+        }
+
+        currentQty = Math.floor(fixedRisk / riskPerShare);
+        currentInvestment = currentQty * entry;
+
+        riskPerShareEl.innerText = "₹" + riskPerShare.toFixed(2);
+        quantityEl.innerText = currentQty.toLocaleString('en-IN');
+        totalInvestmentEl.innerText = "₹" + currentInvestment.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function savePosition() {
+        let ticker = document.getElementById('ticker').value.trim().toUpperCase();
+        const entry = parseFloat(document.getElementById('entry').value);
+        const sl = parseFloat(document.getElementById('sl').value);
+
+        // Fallback name if ticker input is left empty
+        if (!ticker) {
+            ticker = "UNNAMED";
+        }
+
+        // Validate that we have a valid calculated position size
+        if (currentQty <= 0 || isNaN(entry) || isNaN(sl)) {
+            alert("Please input a valid Entry and Stop Loss price before adding.");
+            return;
+        }
+
+        // Add to array
+        savedPositions.push({
+            ticker: ticker,
+            entry: entry,
+            sl: sl,
+            qty: currentQty,
+            capital: currentInvestment
+        });
+
+        // Sort array in Ascending Order based on Capital Required
+        savedPositions.sort((a, b) => a.capital - b.capital);
+
+        // Refresh UI table
+        updateTable();
+
+        // Optional: Clear inputs for next entry
+        document.getElementById('ticker').value = '';
+        document.getElementById('entry').value = '';
+        document.getElementById('sl').value = '';
+        calculateSize();
+    }
+
+    function updateTable() {
+        const tbody = document.getElementById('table-body');
+        const emptyMsg = document.getElementById('empty-msg');
+        
+        tbody.innerHTML = '';
+
+        if (savedPositions.length === 0) {
+            emptyMsg.style.display = 'block';
+            return;
+        } else {
+            emptyMsg.style.display = 'none';
+        }
+
+        savedPositions.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${item.ticker}</strong></td>
+                <td>₹${item.entry.toFixed(2)}</td>
+                <td>₹${item.sl.toFixed(2)}</td>
+                <td style="color:#2ecc71; font-weight:bold;">${item.qty.toLocaleString('en-IN')}</td>
+                <td><strong>₹${item.capital.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+</script>
+
+</body>
+</html>
